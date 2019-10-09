@@ -1,9 +1,10 @@
 # -*- coding:utf-8 -*-
-from WordDict import WordDict
+from WordDict import WordDictBasic
+from WordDict import WordDictHash
+import datetime
 
 
-def get_words_fmm(sentence, word_dict):
-    ret_seg = []
+def get_words_fmm(fmm_seg, sentence, word_dict):
     while len(sentence) > 0:
         length = min(len(sentence), word_dict.get_max_word_length())
         temp_word = sentence[0:length]
@@ -11,13 +12,12 @@ def get_words_fmm(sentence, word_dict):
             if len(temp_word) == 1:
                 break
             temp_word = temp_word[0:len(temp_word) - 1]
-        ret_seg.append(temp_word)
+        fmm_seg.append(temp_word)
         sentence = sentence[len(temp_word):]
-    return ret_seg
 
 
-def get_words_bmm(sentence, word_dict):
-    ret_seg = []
+def get_words_bmm(bmm_seg, sentence, word_dict):
+    temp_seg = []
     while len(sentence) > 0:
         length = min(len(sentence), word_dict.get_max_word_length())
         temp_word = sentence[len(sentence) - length:]
@@ -25,15 +25,26 @@ def get_words_bmm(sentence, word_dict):
             if len(temp_word) == 1:
                 break
             temp_word = temp_word[1:]
-        ret_seg.append(temp_word)
-        sentence = sentence[len(temp_word):]
-    new_ret_seg = []
-    len_ret_seg = len(ret_seg)
-    ind = 0
-    while ind < len_ret_seg:
-        new_ret_seg.append(ret_seg[len_ret_seg - ind - 1])
-        ind = ind + 1
-    return new_ret_seg
+        temp_seg.append(temp_word)
+        sentence = sentence[:len(sentence) - len(temp_word)]
+    temp_seg_ind = len(temp_seg) - 1
+    while temp_seg_ind >= 0:
+        bmm_seg.append(temp_seg[temp_seg_ind])
+        temp_seg_ind = temp_seg_ind - 1
+
+
+def update_seg(line, begin_ind, end_ind, bmm_seg, fmm_seg, word_dict, punctuation_len=0):
+    sentence = line[begin_ind:end_ind]
+    get_words_fmm(fmm_seg, sentence, word_dict)
+    get_words_bmm(bmm_seg, sentence, word_dict)
+    if punctuation_len == 0:
+        return end_ind, end_ind
+    punctuation_end_ind = end_ind + punctuation_len
+    cur_punctuation = f'{line[end_ind:punctuation_end_ind]}'
+    fmm_seg.append(cur_punctuation)
+    bmm_seg.append(cur_punctuation)
+
+    return punctuation_end_ind, punctuation_end_ind
 
 
 def word_seg(sent_filename, word_dict):
@@ -41,77 +52,74 @@ def word_seg(sent_filename, word_dict):
         lines = file_sent.readlines()
         fmm_seg_out = []
         bmm_seg_out = []
+        seg_count = 0
         for line in lines:
             line = line.strip()
-            if line == " ":
+            if len(line) == 0:
                 continue
+            seg_count = seg_count + 1
+            # print(seg_count)
+            # print(line)
             fmm_seg = []
             bmm_seg = []
-            begin_ind = 0
+            last_ind = 0
             line_len = len(line)
             ind = 0
             while ind < line_len:
-                if line[ind] == '—':
-                    if line[ind + 1] == '—':
-                        if line[ind + 2] == '－' or line[ind + 2] == '—':
-                            sentence = line[begin_ind:ind]
-                            fmm_seg.extend(get_words_fmm(sentence, word_dict))
-                            fmm_seg.append(f'{line[ind]}{line[ind + 1]}{line[ind + 2]}')
-                            bmm_seg.extend(get_words_fmm(sentence, word_dict))
-                            bmm_seg.append(f'{line[ind]}{line[ind + 1]}{line[ind + 2]}')
-                            begin_ind = ind + 3
-                            ind = begin_ind
+                if ind + 1 < line_len:
+                    if line[ind] == '—':
+                        if line[ind + 1] == '—':
+                            if ind + 2 < line_len:
+                                if line[ind + 2] == '－' or line[ind + 2] == '—':
+                                    punctuation_len = 3
+                                    last_ind, ind = update_seg(line, last_ind, ind, bmm_seg, fmm_seg,
+                                                               word_dict, punctuation_len)
+                                    continue
+                                punctuation_len = 2
+                                last_ind, ind = update_seg(line, last_ind, ind, bmm_seg, fmm_seg,
+                                                           word_dict, punctuation_len)
+                                continue
+                if ind + 1 < line_len:
+                    if line[ind] == '±':
+                        if line[ind + 1] == '%':
+                            punctuation_len = 2
+                            last_ind, ind = update_seg(line, last_ind, ind, bmm_seg, fmm_seg,
+                                                       word_dict, punctuation_len)
                             continue
-                        else:
-                            sentence = line[begin_ind:ind]
-                            fmm_seg.extend(get_words_fmm(sentence, word_dict))
-                            fmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                            bmm_seg.extend(get_words_fmm(sentence, word_dict))
-                            bmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                            begin_ind = ind + 2
-                            ind = begin_ind
-                            continue
-                if line[ind] == '±' and line[ind + 1] == '%':
-                    sentence = line[begin_ind:ind]
-                    fmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    fmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                    bmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    bmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                    begin_ind = ind + 2
-                    ind = begin_ind
-                    continue
-                if line[ind] == "…" and line[ind + 1] == "…":
-                    sentence = line[begin_ind:ind]
-                    fmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    fmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                    bmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    bmm_seg.append(f'{line[ind]}{line[ind + 1]}')
-                    begin_ind = ind + 2
-                    ind = begin_ind
-                    continue
+                if ind + 1 < line_len:
+                    if line[ind] == "…" and line[ind + 1] == "…":
+                        punctuation_len = 2
+                        last_ind, ind = update_seg(line, last_ind, ind, bmm_seg, fmm_seg,
+                                                   word_dict, punctuation_len)
+                        continue
                 if word_dict.find_punctuation(line[ind]):
-                    sentence = line[begin_ind:ind]
-                    fmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    fmm_seg.append(f'{line[ind]}')
-                    bmm_seg.extend(get_words_fmm(sentence, word_dict))
-                    bmm_seg.append(f'{line[ind]}')
-                    begin_ind = ind + 1
-                    ind = begin_ind
+                    punctuation_len = 1
+                    last_ind, ind = update_seg(line, last_ind, ind, bmm_seg, fmm_seg,
+                                               word_dict, punctuation_len)
                     continue
                 ind = ind + 1
+            if last_ind == 0:
+                update_seg(line, last_ind, line_len, bmm_seg, fmm_seg, word_dict)
             fmm_seg_out.append(fmm_seg)
             bmm_seg_out.append(bmm_seg)
+            # break;
+    print(datetime.datetime.now())
     with open('seg_FMM.txt', 'w') as FMM_file:
         for fmm_seg in fmm_seg_out:
             for seg in fmm_seg:
-                FMM_file.write(seg)
+                FMM_file.write(seg + "  ")
     with open('seg_BMM.txt', 'w') as BMM_file:
-        for bmm_seg in bmm_seg_out:
-            for seg in bmm_seg:
-                BMM_file.write(seg)
+        for fmm_seg in fmm_seg_out:
+            for seg in fmm_seg:
+                BMM_file.write(seg + "  ")
     print("Word Seg OK!")
 
 
 if __name__ == "__main__":
-    word_dict_basic = WordDict(filename="dict.txt")
-    word_seg("199801_sent.txt", word_dict_basic)
+    # word_dict_basic = WordDictBasic(filename="dict.txt")
+    # word_seg("199801_sent.txt", word_dict_basic)
+    # hash_size = 10001659
+    word_dict_hash = WordDictHash(filename="dict.txt", hash_size=hash_size)
+    print(datetime.datetime.now())
+    word_seg("199801_sent.txt", word_dict_hash)
+    print(datetime.datetime.now())

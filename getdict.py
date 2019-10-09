@@ -1,13 +1,13 @@
 import re
 
 
-def convert2gbk(words):
-    words = words.strip()
-    return words.encode("gbk")
+def convert2gbk(cur_word):
+    cur_word = cur_word.strip()
+    return cur_word.encode("gbk")
 
 
-def get_len(punc):
-    return len(punc)
+def get_len(punctation):
+    return len(punctation)
 
 
 if __name__ == '__main__':
