@@ -3,7 +3,7 @@ from math import log
 from FlexibleList import FlexibleList
 
 
-class WordDictBasic:
+class WordDictBase:
     word_list = []
     punctuations = []
     __max_word_length = 0
@@ -42,12 +42,23 @@ class WordDictBasic:
 
 
 def ch_gbk_encode(ch):
-    # return hash(ch) % 1089
     ch_gbk_bytes = ch.encode('gbk')  # big first in gbk
     return (ch_gbk_bytes[0] - 0x81) * 190 + (ch_gbk_bytes[1] - 0x40) - (ch_gbk_bytes[1] // 128)
 
 
-class WordDictHash(WordDictBasic):
+def my_hash(word):
+    seed = 131
+    hash_val = 0
+    for ch in word:
+        hash_val = hash_val * seed + ch_gbk_encode(ch)
+    return int((hash_val & 0x7FFFFFFF))
+
+
+def system_hash(word):
+    return hash(word)
+
+
+class WordDictHash(WordDictBase):
     class HashNode:
         data = None
         next_node = None
@@ -61,21 +72,15 @@ class WordDictHash(WordDictBasic):
 
     hash_nodes = []
     hash_Mod = 0
+    hash_function = my_hash
     __EMPTY_NODE = HashNode("")
     ch_encoder = ch_gbk_encode
 
-    def hash_function(self, word):
-        # return hash(word) % self.hash_Mod
-        seed = 131
-        hash_val = 0
-        for ch in word:
-            hash_val = hash_val * seed + ch_gbk_encode(ch)
-        return int((hash_val & 0x7FFFFFFF) % self.hash_Mod)
-
-    def __init__(self, hash_size, filename_or_word_list):
+    def __init__(self, hash_size, filename_or_word_list, hash_function=my_hash):
         self.hash_Mod = hash_size
         self.hash_nodes = [self.__EMPTY_NODE for i in range(self.hash_Mod)]
         self.ch_encoder = ch_gbk_encode
+        self.hash_function = hash_function
         # notice: super() will use override method in super class.
         if type(filename_or_word_list) == str:
             super().__init__(filename_or_word_list)
@@ -84,7 +89,7 @@ class WordDictHash(WordDictBasic):
 
     def add_word(self, word):
         super().add_word(word)
-        hash_val = self.hash_function(word)
+        hash_val = self.hash_function(word) % self.hash_Mod
         cur_node = self.HashNode(word)
         if self.hash_nodes[hash_val] == self.__EMPTY_NODE:
             self.hash_nodes[hash_val] = cur_node
@@ -98,7 +103,7 @@ class WordDictHash(WordDictBasic):
             return True
 
     def find_word(self, word):
-        hash_val = self.hash_function(word)
+        hash_val = self.hash_function(word) % self.hash_Mod
         if self.hash_nodes[hash_val] == self.__EMPTY_NODE:
             return False
         else:
@@ -122,6 +127,7 @@ class Trie:
             self.children = []
 
     def __init__(self, words):
+        self.child = None
         self.root = self.TrieNode("ROOT", False)
         self.node_size = 0
         for word in words:
@@ -136,17 +142,20 @@ class Trie:
                 new_node = self.TrieNode(val=ch, end=True if ch_ind == len(word) - 1 else False)
                 cur_node.children.append(new_node)
                 cur_node.check_dict.add_word(word=ch)
-                self.node_size += 1
-            for child in cur_node.children:
-                if child.val == ch:
-                    cur_node = child
-                    break
+                cur_node = new_node
+            else:
+                for child in cur_node.children:
+                    if child.val == ch:
+                        cur_node = child
+                        break
 
 
-class WordDictDATrie(WordDictBasic):
-    __MAX_BASE_SIZE = 300000
-    base = [0] * __MAX_BASE_SIZE
-    check = [0] * __MAX_BASE_SIZE
+class WordDictDATrie(WordDictBase):
+    __MAX_BASE_SIZE = 500000  # magic number, get by flexible list
+    __EMPTY_STATE = 0
+    base = [__EMPTY_STATE] * __MAX_BASE_SIZE
+    check = [__EMPTY_STATE] * __MAX_BASE_SIZE
+    used = [False] * __MAX_BASE_SIZE
     ch_encoder = ch_gbk_encode
 
     def __init__(self, filename, ch_encoder=ch_gbk_encode):
@@ -158,11 +167,10 @@ class WordDictDATrie(WordDictBasic):
         trie = Trie(self.word_list)
         self.construct_from_trie(trie)
         del trie
-        # print(len(self.base))
-        # print(len(self.check))
 
     def construct_from_trie(self, trie):
         nodes = [(trie.root, 0)]
+        self.used[0] = True
         find_from = 1
         while nodes:
             trie_node, now_state = nodes.pop(0)
@@ -172,6 +180,7 @@ class WordDictDATrie(WordDictBasic):
             for child in trie_node.children:
                 child_encode = self.ch_encoder(child.val)
                 next_state = abs(self.base[now_state]) + child_encode
+                self.used[next_state] = True
                 self.check[next_state] = now_state
                 nodes.append((child, next_state))
 
@@ -184,7 +193,7 @@ class WordDictDATrie(WordDictBasic):
             base_ok_flag = True
             for child in children:
                 child_state = base_val + self.ch_encoder(child.val)
-                if self.base[child_state] != 0 or self.check[child_state] != 0 or child_state == parent:
+                if self.used[child_state]:
                     loop_times += 1
                     base_val += int(log(loop_times, 2)) + 1
                     base_ok_flag = False
@@ -209,10 +218,22 @@ class WordDictDATrie(WordDictBasic):
         while ind < word_len:
             ch = word[ind]
             parent = cur_node
-            cur_node = abs(self.base[cur_node]) + self.ch_encoder(ch)
+            cur_node = abs(self.base[parent]) + self.ch_encoder(ch)
             if self.check[cur_node] != parent:
                 break
             ind += 1
-        if ind == word_len - 1 and self.base[cur_node] < 0:
+        if ind == word_len and self.base[cur_node] < 0:
             return True
         return False
+
+
+class WordDictSystem(WordDictBase):
+    system_dict = {}
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        for word in self.word_list:
+            self.system_dict[word] = True
+
+    def find_word(self, word):
+        return word in self.system_dict.keys()

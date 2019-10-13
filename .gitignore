@@ -132,3 +132,5 @@ DATrie.py
 .idea
 seg_BMM.txt
 seg_FMM.txt
+small_dict.txt
+small_sent.txt

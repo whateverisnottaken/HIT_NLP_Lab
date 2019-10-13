@@ -1,7 +1,8 @@
 # -*- coding:utf-8 -*-
-from WordDict import WordDictBasic
+from WordDict import system_hash
 from WordDict import WordDictHash
 from WordDict import WordDictDATrie
+from WordDict import WordDictSystem
 import datetime
 
 
@@ -48,8 +49,8 @@ def update_seg(line, begin_ind, end_ind, bmm_seg, fmm_seg, word_dict, punctuatio
     return punctuation_end_ind, punctuation_end_ind
 
 
-def word_seg(sent_filename, word_dict):
-    with open(sent_filename, 'r') as file_sent:
+def word_seg(filename, word_dict):
+    with open(filename, 'r') as file_sent:
         lines = file_sent.readlines()
         fmm_seg_out = []
         bmm_seg_out = []
@@ -99,34 +100,42 @@ def word_seg(sent_filename, word_dict):
                                                word_dict, punctuation_len)
                     continue
                 ind = ind + 1
-            if last_ind == 0:
-                update_seg(line, last_ind, line_len, bmm_seg, fmm_seg, word_dict)
+            update_seg(line, last_ind, line_len, bmm_seg, fmm_seg, word_dict)
             fmm_seg_out.append(fmm_seg)
             bmm_seg_out.append(bmm_seg)
-            # break
     print(datetime.datetime.now())
     with open('seg_FMM.txt', 'w') as FMM_file:
         for fmm_seg in fmm_seg_out:
             for seg in fmm_seg:
-                FMM_file.write(seg + "  ")
+                FMM_file.write(seg + " ")
+            FMM_file.write("\n")
     with open('seg_BMM.txt', 'w') as BMM_file:
         for bmm_seg in bmm_seg_out:
             for seg in bmm_seg:
-                BMM_file.write(seg + "  ")
+                BMM_file.write(seg + " ")
+            BMM_file.write("\n")
     print("Word Seg OK!")
 
 
 if __name__ == "__main__":
+    dict_filename = "dict.txt"
+    sent_filename = "199801_sent.txt"
     # word_dict_basic = WordDictBasic(filename="dict.txt")
     # word_seg("199801_sent.txt", word_dict_basic)
-    hash_size = 10001659
-    word_dict_hash = WordDictHash(hash_size=hash_size, filename_or_word_list="dict.txt")
-    print("Hash Build")
-    print(datetime.datetime.now())
-    word_seg("199801_sent.txt", word_dict_hash)
-    print(datetime.datetime.now())
-    word_dict_DATrie = WordDictDATrie(filename="dict.txt")
-    print("DATrie build")
-    print(datetime.datetime.now())
-    word_seg("199801_sent.txt", word_dict_DATrie)
-    print(datetime.datetime.now())
+    # hash_size = 10001659
+    # word_dict_hash = WordDictHash(filename_or_word_list="dict.txt", hash_size=hash_size,
+    #                               hash_function=system_hash)
+    # print("Hash Build")
+    # print(datetime.datetime.now())
+    # word_seg("199801_sent.txt", word_dict_hash)
+    # print(datetime.datetime.now())
+    # word_dict_DATrie = WordDictDATrie(filename=dict_filename)
+    # print("DATrie build")
+    # print(datetime.datetime.now())
+    # word_seg(sent_filename, word_dict_DATrie)
+    # print(datetime.datetime.now())
+    # word_dict_system = WordDictSystem(filename=dict_filename)
+    # print("system dict build")
+    # print(datetime.datetime.now())
+    # word_seg(sent_filename, word_dict_system)
+    # print(datetime.datetime.now())
