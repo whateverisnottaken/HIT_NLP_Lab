@@ -2,7 +2,7 @@ class FlexibleList(list):
 
     def __update_size(self, ind):
         if ind >= len(self):
-            self.extend([0] * (ind - len(self)) + 1)
+            self.extend([0] * (ind - len(self) + 1))
 
     def __getitem__(self, ind):
         self.__update_size(ind)

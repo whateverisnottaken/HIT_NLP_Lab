@@ -26,6 +26,8 @@ if __name__ == '__main__':
         for item in word_partofspeech.items():
             out = str(item[0])
             if item[1] == '/w':
+                if item[0] == '·':
+                    continue
                 if item[0][0]=='[':
                     punctuations.append(item[0][1:])
                 else:
@@ -40,10 +42,12 @@ if __name__ == '__main__':
                 outs.append(out + '\n')
                 continue
             if results:
+
                 outs.append(results[0] + '\n')
         outs.sort(key=convert2gbk)
         out_map = {}
         count = {}
+        first_count = {}
         for out in outs:
             if out not in out_map:
                 out_len = len(convert2gbk(out)) / 2
@@ -53,6 +57,8 @@ if __name__ == '__main__':
                     count[out_len] = 1
                 out_map[out] = 1
                 f.write(out)
+                first_count.setdefault(out[0], 0)
+                first_count[out[0]] = first_count[out[0]] + 1
         f.write("PUNCTUATIONS:\n")
         punctuations.sort(key=get_len)
         for punctuation in punctuations:
