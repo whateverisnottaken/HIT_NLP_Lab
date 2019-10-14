@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-from WordDict import system_hash
+from WordDict import system_hash, my_hash
 from WordDict import WordDictHash
 from WordDict import WordDictDATrie
 from WordDict import WordDictSystem
@@ -120,20 +120,24 @@ def word_seg(filename, word_dict):
 if __name__ == "__main__":
     dict_filename = "dict.txt"
     sent_filename = "199801_sent.txt"
+
     # word_dict_basic = WordDictBasic(filename="dict.txt")
     # word_seg("199801_sent.txt", word_dict_basic)
+
     # hash_size = 10001659
     # word_dict_hash = WordDictHash(filename_or_word_list="dict.txt", hash_size=hash_size,
-    #                               hash_function=system_hash)
+    #                               hash_function=my_hash)
     # print("Hash Build")
     # print(datetime.datetime.now())
     # word_seg("199801_sent.txt", word_dict_hash)
     # print(datetime.datetime.now())
-    # word_dict_DATrie = WordDictDATrie(filename=dict_filename)
-    # print("DATrie build")
-    # print(datetime.datetime.now())
-    # word_seg(sent_filename, word_dict_DATrie)
-    # print(datetime.datetime.now())
+
+    word_dict_DATrie = WordDictDATrie(filename=dict_filename)
+    print("DATrie build")
+    print(datetime.datetime.now())
+    word_seg(sent_filename, word_dict_DATrie)
+    print(datetime.datetime.now())
+
     # word_dict_system = WordDictSystem(filename=dict_filename)
     # print("system dict build")
     # print(datetime.datetime.now())

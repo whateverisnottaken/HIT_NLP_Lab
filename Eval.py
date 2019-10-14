@@ -17,7 +17,7 @@ def get_line_words_for_std(line):
             ret_words.append(word[1:word_ind])
         else:
             ret_words.append(word[:word_ind])
-    return ret_words
+    return ret_words[1:]
 
 
 def compare(test_lines, result_lines):
@@ -30,14 +30,18 @@ def compare(test_lines, result_lines):
         test_words = get_line_words_for_std(test_lines[i])
         result_words = result_lines[i].split(' ')
         right_word = 0
-        for test_word in test_words:
-            for result_word in result_words:
-                if test_word == result_word:
+        for result_word in result_words:
+            for test_word in test_words:
+                if result_word == test_word:
                     right_word += 1
                     break
         precision += right_word / len(test_words)
         recall += right_word / len(result_words)
-    print(precision / lines_len * 100, recall / lines_len * 100)
+    precision = precision / lines_len * 100
+    recall = recall / lines_len * 100
+    print("Precision: %f Recall: %f" % (precision, recall))
+    f1_score = 2 * precision * recall / (precision + recall)
+    print("F1 : %f" % f1_score)
 
 
 if __name__ == '__main__':
@@ -53,8 +57,10 @@ if __name__ == '__main__':
     file_bmm = open("seg_BMM.txt", 'r')
     file_fmm = open("seg_FMM.txt", 'r')
 
-    bmm_lines = file_bmm.readlines()
     fmm_lines = file_fmm.readlines()
-
-    compare(test_lines=std_lines, result_lines=bmm_lines)
+    remove_blank(fmm_lines)
+    bmm_lines = file_bmm.readlines()
+    remove_blank(bmm_lines)
+    print("BMM:")
     compare(test_lines=std_lines, result_lines=fmm_lines)
+    compare(test_lines=std_lines, result_lines=bmm_lines)
