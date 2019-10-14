@@ -4,7 +4,8 @@
 
    基于DATrie的机械匹配分词系统性能如下图
 
-   ![result](C:\pycode\WordSeg\result.png)
+    ![avatar](result.png)
+   
 
 ## 相关说明
 
